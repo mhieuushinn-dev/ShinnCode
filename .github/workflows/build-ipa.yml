@@ -21,10 +21,8 @@ jobs:
 
       - name: Auto-generate Xcode Project
         run: |
-          # Cài đặt công cụ tạo project tự động XCodeGen nếu chưa có
           brew install xcodegen
           
-          # Tạo file cấu hình project.yml tự động từ các file code có sẵn
           cat <<EOF > project.yml
           name: ShinnCheatChat
           options:
@@ -44,11 +42,10 @@ jobs:
                 CODE_SIGN_IDENTITY: ""
                 CODE_SIGNING_REQUIRED: "NO"
                 CODE_SIGNING_ALLOWED: "NO"
+                SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG"
           EOF
           
-          # Sinh ra file .xcodeproj từ cấu hình trên
           xcodegen generate
-          ls -la
 
       - name: Build and Archive App
         run: |
@@ -61,7 +58,8 @@ jobs:
                      MARKETING_VERSION="2.0" \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
+                     CODE_SIGNING_ALLOWED=NO \
+                     GCC_TREAT_WARNINGS_AS_ERRORS=NO
 
       - name: Package to IPA
         run: |
