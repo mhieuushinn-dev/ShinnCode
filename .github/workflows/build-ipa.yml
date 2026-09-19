@@ -19,8 +19,21 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Auto-generate Xcode Project
+      - name: Fix Code & Auto-generate Xcode Project
         run: |
+          # 1. Tự động kiểm tra và sửa lỗi cú pháp tại dòng guard let trong PackageCell.swift nếu có
+          if [ -f "PackageCell.swift" ]; then
+            echo "Đang tiến hành vá lỗi cú pháp trong PackageCell.swift..."
+            # Thay thế dòng lỗi bằng dòng an toàn hoặc cú pháp chuẩn
+            sed -i '' 's/guard let urlString = item.icon, let u.*/if let urlString = item.icon {/g' PackageCell.swift || true
+          fi
+
+          # Tìm các file PackageCell.swift khác trong thư mục con nếu có
+          find . -name "PackageCell.swift" -type f | while read file; do
+            sed -i '' 's/guard let urlString = item.icon, let u.*/if let urlString = item.icon {/g' "$file" || true
+          done
+
+          # 2. Cài đặt xcodegen và tạo project
           brew install xcodegen
           
           cat <<EOF > project.yml
@@ -42,7 +55,6 @@ jobs:
                 CODE_SIGN_IDENTITY: ""
                 CODE_SIGNING_REQUIRED: "NO"
                 CODE_SIGNING_ALLOWED: "NO"
-                SWIFT_ACTIVE_COMPILATION_CONDITIONS: "DEBUG"
           EOF
           
           xcodegen generate
@@ -58,8 +70,7 @@ jobs:
                      MARKETING_VERSION="2.0" \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO \
-                     GCC_TREAT_WARNINGS_AS_ERRORS=NO
+                     CODE_SIGNING_ALLOWED=NO
 
       - name: Package to IPA
         run: |
