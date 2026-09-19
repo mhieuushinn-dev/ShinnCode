@@ -1,0 +1,46 @@
+name: Build and Sign iOS IPA
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    name: Build and Package IPA
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'
+
+      - name: Build and Archive App
+        run: |
+          # Thay 'TenProjectCuaBan' bằng tên Workspace hoặc Project thực tế của bạn (nếu dùng .xcodeproj thì đổi -workspace thành -project)
+          # Thay 'TenSchemeCuaBan' bằng Scheme name trong Xcode của bạn
+          xcodebuild -workspace TenProjectCuaBan.xcworkspace \
+                     -scheme TenSchemeCuaBan \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath build/App.xcarchive \
+                     archive \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
+
+      - name: Package to IPA (Unsigned / Ad-hoc)
+        run: |
+          mkdir -p build/Payload
+          cp -r build/App.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r App.ipa Payload
+          
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Released-IPA
+          path: build/App.ipa
