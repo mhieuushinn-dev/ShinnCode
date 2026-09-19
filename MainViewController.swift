@@ -1,3 +1,7 @@
+// File: MainViewController.swift
+// Mục đích: Hiển thị repo theo vai trò, xử lý optional an toàn.
+// Yêu cầu: Owner/Admin dùng repo chính, Support/Member dùng repo phụ.
+
 import UIKit
 
 class MainViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
