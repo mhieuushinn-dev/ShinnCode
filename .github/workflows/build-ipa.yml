@@ -21,36 +21,22 @@ jobs:
 
       - name: Build and Archive App
         run: |
-          # Tìm kiếm tường minh file project hoặc workspace
-          if [ -d "*.xcworkspace" ]; then
-            WORKSPACE_NAME=$(ls -d *.xcworkspace | head -n 1)
-            echo "Building using workspace: $WORKSPACE_NAME"
-            xcodebuild -workspace "$WORKSPACE_NAME" \
-                       -scheme "Shinn Cheat Chat" \
-                       -configuration Release \
-                       -sdk iphoneos \
-                       -archivePath build/ShinnCheatChat.xcarchive \
-                       archive \
-                       MARKETING_VERSION="2.0" \
-                       PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
-                       CODE_SIGN_IDENTITY="" \
-                       CODE_SIGNING_REQUIRED=NO \
-                       CODE_SIGNING_ALLOWED=NO
-          else
-            PROJECT_NAME=$(ls -d *.xcodeproj | head -n 1)
-            echo "Building using project: $PROJECT_NAME"
-            xcodebuild -project "$PROJECT_NAME" \
-                       -scheme "Shinn Cheat Chat" \
-                       -configuration Release \
-                       -sdk iphoneos \
-                       -archivePath build/ShinnCheatChat.xcarchive \
-                       archive \
-                       MARKETING_VERSION="2.0" \
-                       PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
-                       CODE_SIGN_IDENTITY="" \
-                       CODE_SIGNING_REQUIRED=NO \
-                       CODE_SIGNING_ALLOWED=NO
-          fi
+          # Tự động tìm file .xcodeproj bất kể nằm ở thư mục gốc hay thư mục con
+          PROJECT_FILE=$(find . -maxdepth 2 -name "*.xcodeproj" | head -n 1)
+          
+          echo "Found project file: $PROJECT_FILE"
+          
+          xcodebuild -project "$PROJECT_FILE" \
+                     -scheme "Shinn Cheat Chat" \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath build/ShinnCheatChat.xcarchive \
+                     archive \
+                     MARKETING_VERSION="2.0" \
+                     PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO
 
       - name: Package to IPA
         run: |
