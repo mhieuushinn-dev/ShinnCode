@@ -1,4 +1,4 @@
-name: Build and Sign iOS IPA
+name: Build Shinn Cheat Chat IPA
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-ipa:
-    name: Build and Package IPA
+    name: Build Shinn Cheat Chat v2.0
     runs-on: macos-latest
 
     steps:
@@ -21,26 +21,49 @@ jobs:
 
       - name: Build and Archive App
         run: |
-          # Thay 'TenProjectCuaBan' bằng tên Workspace hoặc Project thực tế của bạn (nếu dùng .xcodeproj thì đổi -workspace thành -project)
-          # Thay 'TenSchemeCuaBan' bằng Scheme name trong Xcode của bạn
-          xcodebuild -workspace TenProjectCuaBan.xcworkspace \
-                     -scheme TenSchemeCuaBan \
-                     -configuration Release \
-                     -sdk iphoneos \
-                     -archivePath build/App.xcarchive \
-                     archive \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO
+          # Tìm tự động file .xcodeproj hoặc .xcworkspace trong thư mục gốc
+          PROJECT_FILE=$(ls -d *.xcworkspace 2>/dev/null | head -n 1)
+          if [ -z "$PROJECT_FILE" ]; then
+            PROJECT_FILE=$(ls -d *.xcodeproj 2>/dev/null | head -n 1)
+          fi
+          
+          echo "Using project/workspace: $PROJECT_FILE"
+          
+          # Lệnh Archive ứng dụng (bỏ qua ký số để test build tự động không lỗi certificate)
+          if [[ "$PROJECT_FILE" == *.xcworkspace ]]; then
+            xcodebuild -workspace "$PROJECT_FILE" \
+                       -scheme "Shinn Cheat Chat" \
+                       -configuration Release \
+                       -sdk iphoneos \
+                       -archivePath build/ShinnCheatChat.xcarchive \
+                       archive \
+                       MARKETING_VERSION="2.0" \
+                       PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
+                       CODE_SIGN_IDENTITY="" \
+                       CODE_SIGNING_REQUIRED=NO \
+                       CODE_SIGNING_ALLOWED=NO
+          else
+            xcodebuild -project "$PROJECT_FILE" \
+                       -scheme "Shinn Cheat Chat" \
+                       -configuration Release \
+                       -sdk iphoneos \
+                       -archivePath build/ShinnCheatChat.xcarchive \
+                       archive \
+                       MARKETING_VERSION="2.0" \
+                       PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
+                       CODE_SIGN_IDENTITY="" \
+                       CODE_SIGNING_REQUIRED=NO \
+                       CODE_SIGNING_ALLOWED=NO
+          fi
 
-      - name: Package to IPA (Unsigned / Ad-hoc)
+      - name: Package to IPA
         run: |
           mkdir -p build/Payload
-          cp -r build/App.xcarchive/Products/Applications/*.app build/Payload/
-          cd build && zip -r App.ipa Payload
+          cp -r build/ShinnCheatChat.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r ShinnCheatChat-v2.0.ipa Payload
           
       - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Released-IPA
-          path: build/App.ipa
+          name: ShinnCheatChat-v2.0-IPA
+          path: build/ShinnCheatChat-v2.0.ipa
