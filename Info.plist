@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>Shinn Cheat</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.shinnthieuu.shinncheat</string>
+    <key>CFBundleName</key>
+    <string>ShinnCheat</string>
+    <key>CFBundleShortVersionString</key>
+    <string>2009</string>
+    <key>CFBundleVersion</key>
+    <string>2009</string>
+    <key>MinimumOSVersion</key>
+    <string>14.0</string>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <key>NSUserActivityTypes</key>
+    <array>
+        <string>Shinn Cheat</string>
+        <string>ShinnThieuu</string>
+        <string>Menu FF</string>
+        <string>ESP AIM FF</string>
+        <string>Mod Skin FF</string>
+    </array>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>https</string>
+        <string>http</string>
+        <string>tg</string>
+        <string>fb</string>
+    </array>
+</dict>
+</plist>
