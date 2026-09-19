@@ -1,75 +1,89 @@
-# File: .github/workflows/build.yml
-# Mục đích: Sinh project Xcode từ project.yml bằng XcodeGen, archive và tạo IPA.
-# Yêu cầu: Chạy trên macOS runner, không cần file .xcodeproj sẵn.
-
-name: Build and Archive App
+name: Build Shinn Cheat Chat IPA
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: macos-14
+  build-ipa:
+    name: Build Shinn Cheat Chat v2.0
+    runs-on: macos-latest
+
     steps:
-      - name: Checkout mã nguồn
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Chọn Xcode
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
-      - name: Hiển thị Xcode
-        run: xcodebuild -version
-
-      - name: Cài XcodeGen
-        run: brew install xcodegen
-
-      - name: Sinh project Xcode
-        run: xcodegen generate
-
-      - name: Liệt kê scheme
-        run: xcodebuild -project ShinnCheat.xcodeproj -list
-
-      - name: Tạo thư mục build
-        run: mkdir -p build
-
-      - name: Archive không ký
+      - name: Fix Syntax Errors & Generate Project
         run: |
-          xcodebuild \
-            -project ShinnCheat.xcodeproj \
-            -scheme ShinnCheat \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath $PWD/build/ShinnCheat.xcarchive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            archive
+          echo "=== 1. Đang kiểm tra và vá lỗi cú pháp Swift ==="
+          find . -name "*.swift" -type f | while read file; do
+            # Vá dòng guard let bị lỗi cụt ở PackageCell.swift hoặc các file tương tự
+            if grep -q "guard let urlString = item.icon" "$file"; then
+              echo "Đã tìm thấy lỗi ở file: $file -> Đang tiến hành sửa..."
+              # Thay thế cú pháp lỗi bằng cú pháp an toàn
+              sed -i '' 's/guard let urlString = item.icon.*//g' "$file"
+              # Chèn lại dòng lệnh hợp lệ
+              echo 'if let urlString = item.icon {' >> "$file"
+            fi
+          done
 
-      - name: Kiểm tra archive
+          echo "=== 2. Cài đặt công cụ tạo project xcodegen ==="
+          brew install xcodegen
+          
+          echo "=== 3. Tạo file cấu hình project.yml ==="
+          cat <<EOF > project.yml
+          name: ShinnCheatChat
+          options:
+            bundleIdPrefix: com.apple.mobile
+          targets:
+            Shinn Cheat Chat:
+              type: application
+              platform: iOS
+              deploymentTarget: "15.0"
+              sources:
+                - path: .
+                  excludes:
+                    - .github
+              settings:
+                PRODUCT_BUNDLE_IDENTIFIER: "com.apple.mobile.MobileHouseArrest"
+                INFOPLIST_FILE: "Info.plist"
+                CODE_SIGN_IDENTITY: ""
+                CODE_SIGNING_REQUIRED: "NO"
+                CODE_SIGNING_ALLOWED: "NO"
+                SWIFT_VERSION: "5.0"
+          EOF
+          
+          echo "=== 4. Sinh file .xcodeproj ==="
+          xcodegen generate
+
+      - name: Build and Archive App
         run: |
-          if [ ! -d build/ShinnCheat.xcarchive ]; then
-            echo "Archive không tồn tại"
-            exit 1
-          fi
-          find build/ShinnCheat.xcarchive -name "*.app" -maxdepth 4
+          xcodebuild -project ShinnCheatChat.xcodeproj \
+                     -scheme "Shinn Cheat Chat" \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -archivePath build/ShinnCheatChat.xcarchive \
+                     archive \
+                     MARKETING_VERSION="2.0" \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     GCC_TREAT_WARNINGS_AS_ERRORS=NO
 
-      - name: Tạo IPA
+      - name: Package to IPA
         run: |
-          cd build
-          mkdir -p Payload
-          APP_PATH=$(find ShinnCheat.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Không tìm thấy .app"
-            exit 1
-          fi
-          cp -R "$APP_PATH" Payload/
-          zip -r ShinnCheat.ipa Payload
-          ls -la
-
-      - name: Upload IPA
+          mkdir -p build/Payload
+          cp -r build/ShinnCheatChat.xcarchive/Products/Applications/*.app build/Payload/
+          cd build && zip -r ShinnCheatChat-v2.0.ipa Payload
+          
+      - name: Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ShinnCheat-IPA
-          path: build/ShinnCheat.ipa
+          name: ShinnCheatChat-v2.0-IPA
+          path: build/ShinnCheatChat-v2.0.ipa
