@@ -1,30 +1,36 @@
+// File: RepoManager.swift
+// Mục đích: Định nghĩa RepoPackage và RepoData khớp JSON thực tế, tải repo theo vai trò.
+// Yêu cầu: Tất cả trường có thể thiếu phải là optional hoặc có giá trị mặc định.
+
 import Foundation
 
+// Cấu trúc gói trong repo, khớp chính xác với JSON
 struct RepoPackage: Codable {
     let identifier: String
     let name: String
-    let author: String
-    let version: String
-    let summary: String
-    let description: String
-    let category: String
-    let tags: [String]
-    let publishedAt: String
+    let author: String?
+    let version: String?
+    let summary: String?
+    let description: String?
+    let category: String?
+    let tags: [String]?
+    let publishedAt: String?
     let download: String
-    let sha256: String
-    let size: Int
-    let featured: Bool
-    let isPrivate: Bool
-    let icon: String
+    let sha256: String?
+    let size: Int?
+    let featured: Bool?
+    let isPrivate: Bool?
+    let icon: String?
 }
 
+// Cấu trúc gốc repo
 struct RepoData: Codable {
-    let schemaVersion: Int
-    let identifier: String
-    let name: String
-    let description: String
-    let accentColor: String
-    let icon: String
+    let schemaVersion: Int?
+    let identifier: String?
+    let name: String?
+    let description: String?
+    let accentColor: String?
+    let icon: String?
     let packages: [RepoPackage]
 }
 
