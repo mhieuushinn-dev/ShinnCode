@@ -19,21 +19,46 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Auto-generate Xcode Project
+        run: |
+          # Cài đặt công cụ tạo project tự động XCodeGen nếu chưa có
+          brew install xcodegen
+          
+          # Tạo file cấu hình project.yml tự động từ các file code có sẵn
+          cat <<EOF > project.yml
+          name: ShinnCheatChat
+          options:
+            bundleIdPrefix: com.apple.mobile
+          targets:
+            Shinn Cheat Chat:
+              type: application
+              platform: iOS
+              deploymentTarget: "15.0"
+              sources:
+                - path: .
+                  excludes:
+                    - .github
+              settings:
+                PRODUCT_BUNDLE_IDENTIFIER: "com.apple.mobile.MobileHouseArrest"
+                INFOPLIST_FILE: "Info.plist"
+                CODE_SIGN_IDENTITY: ""
+                CODE_SIGNING_REQUIRED: "NO"
+                CODE_SIGNING_ALLOWED: "NO"
+          EOF
+          
+          # Sinh ra file .xcodeproj từ cấu hình trên
+          xcodegen generate
+          ls -la
+
       - name: Build and Archive App
         run: |
-          # Tự động tìm file .xcodeproj bất kể nằm ở thư mục gốc hay thư mục con
-          PROJECT_FILE=$(find . -maxdepth 2 -name "*.xcodeproj" | head -n 1)
-          
-          echo "Found project file: $PROJECT_FILE"
-          
-          xcodebuild -project "$PROJECT_FILE" \
+          xcodebuild -project ShinnCheatChat.xcodeproj \
                      -scheme "Shinn Cheat Chat" \
                      -configuration Release \
                      -sdk iphoneos \
                      -archivePath build/ShinnCheatChat.xcarchive \
                      archive \
                      MARKETING_VERSION="2.0" \
-                     PRODUCT_BUNDLE_IDENTIFIER="com.apple.mobile.MobileHouseArrest" \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGNING_ALLOWED=NO
