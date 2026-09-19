@@ -1,0 +1,30 @@
+name: Build iOS App (.ipa)
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build IPA on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0' # Hoặc phiên bản Xcode phù hợp với project của bạn
+
+      - name: Build Simulator App (Test Build)
+        run: |
+          # Nếu bạn chưa cấu hình Chứng chỉ (Certificate) và Provisioning Profile để Sign app thật,
+          # bạn có thể build kiểm tra lỗi biên dịch code trước:
+          xcodebuild -scheme ShinnCheat -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15' clean build
+          
+          # Hoặc nếu muốn build archive (Cần thiết lập Signing & Capabilities trong Xcode trước):
+          # xcodebuild -workspace YourProject.xcworkspace -scheme ShinnCheat -configuration Release -archivePath build/ShinnCheat.xcarchive archive
+          # xcodebuild -exportArchive -archivePath build/ShinnCheat.xcarchive -exportOptionsPlist ExportOptions.plist -exportPath build/ipa
