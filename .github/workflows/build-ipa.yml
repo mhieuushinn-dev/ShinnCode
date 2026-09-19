@@ -1,6 +1,6 @@
 # File: .github/workflows/build.yml
 # Mục đích: Tự động build IPA từ mã nguồn Swift trên GitHub Actions.
-# Yêu cầu: Chạy trên macOS runner, dùng xcodebuild archive và export IPA.
+# Yêu cầu: Kiểm tra archive hợp lệ, tạo IPA đúng cách, không lỗi exit code 1.
 
 name: Build and Archive App
 
@@ -22,35 +22,83 @@ jobs:
       - name: Hiển thị phiên bản Xcode
         run: xcodebuild -version
 
-      - name: Cài đặt công cụ cần thiết
+      - name: Liệt kê cấu trúc thư mục
+        run: ls -la
+
+      - name: Tìm project hoặc workspace
+        id: find_project
         run: |
-          brew install xcbeautify || true
+          if [ -d *.xcworkspace ]; then
+            echo "PROJECT_TYPE=workspace" >> $GITHUB_OUTPUT
+            echo "PROJECT_NAME=$(ls -d *.xcworkspace | head -n 1)" >> $GITHUB_OUTPUT
+          elif [ -d *.xcodeproj ]; then
+            echo "PROJECT_TYPE=project" >> $GITHUB_OUTPUT
+            echo "PROJECT_NAME=$(ls -d *.xcodeproj | head -n 1)" >> $GITHUB_OUTPUT
+          else
+            echo "Không tìm thấy project hoặc workspace"
+            exit 1
+          fi
+
+      - name: Liệt kê scheme khả dụng
+        run: |
+          if [ "${{ steps.find_project.outputs.PROJECT_TYPE }}" = "workspace" ]; then
+            xcodebuild -workspace "${{ steps.find_project.outputs.PROJECT_NAME }}" -list
+          else
+            xcodebuild -project "${{ steps.find_project.outputs.PROJECT_NAME }}" -list
+          fi
 
       - name: Tạo thư mục build
         run: mkdir -p build
 
       - name: Build archive không ký
         run: |
-          xcodebuild \
-            -project ShinnCheat.xcodeproj \
-            -scheme ShinnCheat \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath $PWD/build/ShinnCheat.xcarchive \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            archive | xcbeautify
+          if [ "${{ steps.find_project.outputs.PROJECT_TYPE }}" = "workspace" ]; then
+            xcodebuild \
+              -workspace "${{ steps.find_project.outputs.PROJECT_NAME }}" \
+              -scheme "$(xcodebuild -workspace ${{ steps.find_project.outputs.PROJECT_NAME }} -list | grep -A 1 'Schemes:' | tail -n 1 | xargs)" \
+              -configuration Release \
+              -sdk iphoneos \
+              -archivePath $PWD/build/App.xcarchive \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              archive
+          else
+            xcodebuild \
+              -project "${{ steps.find_project.outputs.PROJECT_NAME }}" \
+              -scheme "$(xcodebuild -project ${{ steps.find_project.outputs.PROJECT_NAME }} -list | grep -A 1 'Schemes:' | tail -n 1 | xargs)" \
+              -configuration Release \
+              -sdk iphoneos \
+              -archivePath $PWD/build/App.xcarchive \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO \
+              CODE_SIGNING_ALLOWED=NO \
+              archive
+          fi
+
+      - name: Kiểm tra archive tồn tại
+        run: |
+          if [ ! -d build/App.xcarchive ]; then
+            echo "Archive không tồn tại"
+            exit 1
+          fi
+          ls -R build/App.xcarchive
 
       - name: Tạo file IPA từ archive
         run: |
           cd build
           mkdir -p Payload
-          cp -R ShinnCheat.xcarchive/Products/Applications/*.app Payload/
-          zip -r ShinnCheat.ipa Payload
+          # Tìm file .app trong archive
+          APP_PATH=$(find App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Không tìm thấy file .app trong archive"
+            exit 1
+          fi
+          cp -R "$APP_PATH" Payload/
+          zip -r App.ipa Payload
 
       - name: Tải lên artifact IPA
         uses: actions/upload-artifact@v4
         with:
           name: ShinnCheat-IPA
-          path: build/ShinnCheat.ipa
+          path: build/App.ipa
