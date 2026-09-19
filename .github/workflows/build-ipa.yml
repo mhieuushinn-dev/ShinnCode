@@ -1,6 +1,6 @@
 # File: .github/workflows/build.yml
-# Mục đích: Tự động build IPA từ mã nguồn Swift trên GitHub Actions.
-# Yêu cầu: Kiểm tra archive hợp lệ, tạo IPA đúng cách, không lỗi exit code 1.
+# Mục đích: Sinh project Xcode từ project.yml bằng XcodeGen, archive và tạo IPA.
+# Yêu cầu: Chạy trên macOS runner, không cần file .xcodeproj sẵn.
 
 name: Build and Archive App
 
@@ -16,89 +16,60 @@ jobs:
       - name: Checkout mã nguồn
         uses: actions/checkout@v4
 
-      - name: Chọn phiên bản Xcode
+      - name: Chọn Xcode
         run: sudo xcode-select -s /Applications/Xcode.app
 
-      - name: Hiển thị phiên bản Xcode
+      - name: Hiển thị Xcode
         run: xcodebuild -version
 
-      - name: Liệt kê cấu trúc thư mục
-        run: ls -la
+      - name: Cài XcodeGen
+        run: brew install xcodegen
 
-      - name: Tìm project hoặc workspace
-        id: find_project
-        run: |
-          if [ -d *.xcworkspace ]; then
-            echo "PROJECT_TYPE=workspace" >> $GITHUB_OUTPUT
-            echo "PROJECT_NAME=$(ls -d *.xcworkspace | head -n 1)" >> $GITHUB_OUTPUT
-          elif [ -d *.xcodeproj ]; then
-            echo "PROJECT_TYPE=project" >> $GITHUB_OUTPUT
-            echo "PROJECT_NAME=$(ls -d *.xcodeproj | head -n 1)" >> $GITHUB_OUTPUT
-          else
-            echo "Không tìm thấy project hoặc workspace"
-            exit 1
-          fi
+      - name: Sinh project Xcode
+        run: xcodegen generate
 
-      - name: Liệt kê scheme khả dụng
-        run: |
-          if [ "${{ steps.find_project.outputs.PROJECT_TYPE }}" = "workspace" ]; then
-            xcodebuild -workspace "${{ steps.find_project.outputs.PROJECT_NAME }}" -list
-          else
-            xcodebuild -project "${{ steps.find_project.outputs.PROJECT_NAME }}" -list
-          fi
+      - name: Liệt kê scheme
+        run: xcodebuild -project ShinnCheat.xcodeproj -list
 
       - name: Tạo thư mục build
         run: mkdir -p build
 
-      - name: Build archive không ký
+      - name: Archive không ký
         run: |
-          if [ "${{ steps.find_project.outputs.PROJECT_TYPE }}" = "workspace" ]; then
-            xcodebuild \
-              -workspace "${{ steps.find_project.outputs.PROJECT_NAME }}" \
-              -scheme "$(xcodebuild -workspace ${{ steps.find_project.outputs.PROJECT_NAME }} -list | grep -A 1 'Schemes:' | tail -n 1 | xargs)" \
-              -configuration Release \
-              -sdk iphoneos \
-              -archivePath $PWD/build/App.xcarchive \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              archive
-          else
-            xcodebuild \
-              -project "${{ steps.find_project.outputs.PROJECT_NAME }}" \
-              -scheme "$(xcodebuild -project ${{ steps.find_project.outputs.PROJECT_NAME }} -list | grep -A 1 'Schemes:' | tail -n 1 | xargs)" \
-              -configuration Release \
-              -sdk iphoneos \
-              -archivePath $PWD/build/App.xcarchive \
-              CODE_SIGN_IDENTITY="" \
-              CODE_SIGNING_REQUIRED=NO \
-              CODE_SIGNING_ALLOWED=NO \
-              archive
-          fi
+          xcodebuild \
+            -project ShinnCheat.xcodeproj \
+            -scheme ShinnCheat \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath $PWD/build/ShinnCheat.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
 
-      - name: Kiểm tra archive tồn tại
+      - name: Kiểm tra archive
         run: |
-          if [ ! -d build/App.xcarchive ]; then
+          if [ ! -d build/ShinnCheat.xcarchive ]; then
             echo "Archive không tồn tại"
             exit 1
           fi
-          ls -R build/App.xcarchive
+          find build/ShinnCheat.xcarchive -name "*.app" -maxdepth 4
 
-      - name: Tạo file IPA từ archive
+      - name: Tạo IPA
         run: |
           cd build
           mkdir -p Payload
-          # Tìm file .app trong archive
-          APP_PATH=$(find App.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -n 1)
+          APP_PATH=$(find ShinnCheat.xcarchive/Products/Applications -name "*.app" -maxdepth 1 | head -n 1)
           if [ -z "$APP_PATH" ]; then
-            echo "Không tìm thấy file .app trong archive"
+            echo "Không tìm thấy .app"
             exit 1
           fi
           cp -R "$APP_PATH" Payload/
-          zip -r App.ipa Payload
+          zip -r ShinnCheat.ipa Payload
+          ls -la
 
-      - name: Tải lên artifact IPA
+      - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ShinnCheat-IPA
-          path: build/App.ipa
+          path: build/ShinnCheat.ipa
