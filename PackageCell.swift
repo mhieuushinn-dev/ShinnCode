@@ -1,8 +1,8 @@
-import UIKit
+// File: PackageCell.swift
+// Mục đích: Ô hiển thị thông tin gói, tải icon bất đồng bộ.
+// Yêu cầu: Xử lý đúng optional, không crash khi thiếu trường.
 
-class ImageCache {
-    static let shared = NSCache<NSString, UIImage>()
-}
+import UIKit
 
 class PackageCell: UITableViewCell {
 
@@ -51,9 +51,6 @@ class PackageCell: UITableViewCell {
         return label
     }()
 
-    private var currentImageURL: String?
-    private var dataTask: URLSessionDataTask?
-
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         backgroundColor = .clear
@@ -63,14 +60,6 @@ class PackageCell: UITableViewCell {
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) chưa được triển khai")
-    }
-
-    override func prepareForReuse() {
-        super.prepareForReuse()
-        dataTask?.cancel()
-        dataTask = nil
-        iconView.image = nil
-        currentImageURL = nil
     }
 
     private func setupViews() {
@@ -93,40 +82,30 @@ class PackageCell: UITableViewCell {
 
             titleLabel.leadingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 12),
             titleLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: arrowLabel.leadingAnchor, constant: -8),
 
             subtitleLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 4),
-            subtitleLabel.trailingAnchor.constraint(lessThanOrEqualTo: arrowLabel.leadingAnchor, constant: -8),
 
             arrowLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
             arrowLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
     }
 
+    // Hàm gán dữ liệu, xử lý optional an toàn
     func configure(with item: RepoPackage) {
         titleLabel.text = item.name
-        subtitleLabel.text = "\(item.category) - v\(item.version)"
+        let category = item.category ?? "Khác"
+        let version = item.version ?? "?"
+        subtitleLabel.text = "\(category) - v\(version)"
         iconView.image = UIImage(systemName: "square.grid.2x2")
-
-        guard let urlString = item.icon, let url = URL(string: urlString) else { return }
-        
-        currentImageURL = urlString
-
-        if let cachedImage = ImageCache.shared.object(forKey: urlString as NSString) {
-            iconView.image = cachedImage
-            return
+        if let iconString = item.icon, let url = URL(string: iconString) {
+            URLSession.shared.dataTask(with: url) { data, _, _ in
+                if let data = data, let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self.iconView.image = image
+                    }
+                }
+            }.resume()
         }
-
-        dataTask = URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-            guard let self = self, let data = data, let image = UIImage(data: data), self.currentImageURL == urlString else { return }
-            
-            ImageCache.shared.setObject(image, forKey: urlString as NSString)
-            
-            DispatchQueue.main.async {
-                self.iconView.image = image
-            }
-        }
-        dataTask?.resume()
     }
 }
